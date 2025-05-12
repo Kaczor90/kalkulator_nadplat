@@ -4,7 +4,7 @@ services:
     name: mortgage-calculator-frontend
     env: static
     buildCommand: cd frontend && npm install && npm run build
-    staticPublishPath: ./frontend/build
+    staticPublishPath: frontend/build
     envVars:
       - key: REACT_APP_API_URL
         fromService:
@@ -22,6 +22,8 @@ services:
     name: mortgage-calculator-backend
     env: node
     plan: starter
+    runtime: node
+    nodeVersion: 20.x
     buildCommand: cd backend && npm install && npm run build
     startCommand: cd backend && npm run start:prod
     envVars:

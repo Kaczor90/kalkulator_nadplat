@@ -45,20 +45,12 @@ async function bootstrap() {
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api/docs', app, document);
 
-  // Try to use port from environment, fallback to 3010
-  const defaultPort = process.env.PORT ?? 3010;
-  try {
-    await app.listen(defaultPort);
-    console.log(`Application started on port ${defaultPort}`);
-  } catch (error) {
-    if (error.code === 'EADDRINUSE') {
-      const fallbackPort = 3011;
-      console.log(`Port ${defaultPort} is in use, trying fallback port ${fallbackPort}`);
-      await app.listen(fallbackPort);
-      console.log(`Application started on fallback port ${fallbackPort}`);
-    } else {
-      throw error;
-    }
-  }
+  // Get port from environment variable
+  const port = process.env.PORT || 3010;
+  console.log(`Starting application on port: ${port}`);
+  
+  // Listen for connections
+  await app.listen(port);
+  console.log(`Application is running on: ${await app.getUrl()}`);
 }
 bootstrap();
