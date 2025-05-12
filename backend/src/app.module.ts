@@ -5,12 +5,14 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { MortgageModule } from './mortgage/mortgage.module';
 import { DatabaseModule } from './database/database.module';
 import { HealthModule } from './health/health.module';
+import * as path from 'path';
+import * as fs from 'fs';
 
 // Import configuration based on environment
 const isProduction = process.env.NODE_ENV === 'production';
-const renderConfig = isProduction ? require('./config/render.config') : null;
+let renderConfig = null;
 
-// Default MongoDB options
+// Define default MongoDB options first
 const defaultMongoOptions = {
   connectTimeoutMS: 10000,
   serverSelectionTimeoutMS: 5000,
@@ -20,14 +22,66 @@ const defaultMongoOptions = {
   heartbeatFrequencyMS: 10000,
 };
 
+// Try to load render.config.js in different ways
+if (isProduction) {
+  try {
+    // First try direct import 
+    try {
+      renderConfig = require('./config/render.config');
+      console.log('Loaded render.config.js from direct import');
+    } catch (directError) {
+      console.warn('Could not load render.config.js directly:', directError.message);
+      
+      // Try with path resolve
+      const possiblePaths = [
+        path.resolve(__dirname, './config/render.config.js'),
+        path.resolve(__dirname, '../config/render.config.js'),
+        path.resolve(__dirname, '../dist/config/render.config.js'),
+        path.resolve(process.cwd(), './dist/config/render.config.js')
+      ];
+      
+      let loaded = false;
+      for (const configPath of possiblePaths) {
+        try {
+          if (fs.existsSync(configPath)) {
+            renderConfig = require(configPath);
+            console.log(`Loaded render.config.js from ${configPath}`);
+            loaded = true;
+            break;
+          }
+        } catch (e) {
+          console.warn(`Failed to load from ${configPath}:`, e.message);
+        }
+      }
+      
+      if (!loaded) {
+        console.warn('render.config.js not found in any expected location, using default MongoDB options');
+      }
+    }
+  } catch (error) {
+    console.warn('Error loading render.config.js, using default options:', error.message);
+  }
+}
+
 // Connection options based on environment
-const mongoOptions = isProduction && renderConfig ? renderConfig.mongodb.options : defaultMongoOptions;
+// Add additional validation to ensure we have a valid config
+const mongoOptions = (isProduction && 
+  renderConfig && 
+  renderConfig.mongodb && 
+  renderConfig.mongodb.options) 
+  ? renderConfig.mongodb.options 
+  : defaultMongoOptions;
 
 // Handle MongoDB connection string - replace password placeholder if needed
 let mongoUri = process.env.MONGODB_URI || 'mongodb://localhost:27017/mortgage-calculator';
 if (mongoUri.includes('<MONGODB_PASSWORD>') && process.env.MONGODB_PASSWORD) {
   mongoUri = mongoUri.replace('<MONGODB_PASSWORD>', process.env.MONGODB_PASSWORD);
 }
+
+// Log the MongoDB connection info (with redacted password)
+const redactedUri = mongoUri.replace(/\/\/([^:]+):([^@]+)@/, '//\\1:***@');
+console.log(`Connecting to MongoDB: ${redactedUri}`);
+console.log('Using MongoDB options:', JSON.stringify(mongoOptions));
 
 @Module({
   imports: [

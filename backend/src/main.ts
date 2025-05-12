@@ -3,8 +3,50 @@ import { AppModule } from './app.module';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { ValidationPipe, Logger } from '@nestjs/common';
 import * as mongoose from 'mongoose';
+import * as fs from 'fs';
+import * as path from 'path';
 
 async function bootstrap() {
+  // Create fallback config directory and file if needed
+  try {
+    const configDir = path.resolve(__dirname, 'config');
+    const configFile = path.resolve(configDir, 'render.config.js');
+    
+    if (!fs.existsSync(configDir)) {
+      Logger.log(`Creating config directory: ${configDir}`, 'Bootstrap');
+      fs.mkdirSync(configDir, { recursive: true });
+    }
+    
+    if (!fs.existsSync(configFile)) {
+      Logger.log(`Creating fallback render.config.js: ${configFile}`, 'Bootstrap');
+      const fallbackConfig = `
+// Fallback configuration for render.com deployment (created at runtime)
+module.exports = {
+  debug: process.env.DEBUG === 'true',
+  mongodb: {
+    uri: process.env.MONGODB_URI,
+    options: {
+      connectTimeoutMS: 30000,
+      serverSelectionTimeoutMS: 30000,
+      socketTimeoutMS: 60000,
+      heartbeatFrequencyMS: 30000,
+      tls: true,
+      tlsAllowInvalidCertificates: false,
+      retryWrites: true,
+      retryReads: true,
+      maxPoolSize: 10,
+      minPoolSize: 1,
+      maxIdleTimeMS: 45000,
+    }
+  }
+};
+`;
+      fs.writeFileSync(configFile, fallbackConfig);
+    }
+  } catch (error) {
+    Logger.warn(`Failed to create fallback config: ${error.message}`, 'Bootstrap');
+  }
+
   // Set up global Mongoose debug mode if needed
   if (process.env.MONGOOSE_DEBUG === 'true') {
     mongoose.set('debug', true);

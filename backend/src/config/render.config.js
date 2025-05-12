@@ -27,4 +27,13 @@ module.exports = {
       maxIdleTimeMS: 45000, // Close idle connections after 45 seconds
     }
   }
-}; 
+};
+
+// Add some resilience - if this file is directly required and fails to load
+try {
+  // Let caller know we loaded successfully
+  module.exports.__loaded = true;
+} catch (e) {
+  // This is to prevent any errors when this file is loaded
+  console.error('Error in render.config.js:', e);
+} 
