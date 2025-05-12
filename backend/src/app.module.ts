@@ -1,58 +1,40 @@
-import { Module, Logger } from '@nestjs/common';
+import { Module } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { MongooseModule } from '@nestjs/mongoose';
 import { MortgageModule } from './mortgage/mortgage.module';
-import { Error } from 'mongoose';
+import { DatabaseModule } from './database/database.module';
+import { HealthModule } from './health/health.module';
 
-const logger = new Logger('MongooseModule');
+// Import configuration based on environment
+const isProduction = process.env.NODE_ENV === 'production';
+const renderConfig = isProduction ? require('./config/render.config') : null;
+
+// Default MongoDB options
+const defaultMongoOptions = {
+  connectTimeoutMS: 10000,
+  serverSelectionTimeoutMS: 5000,
+  socketTimeoutMS: 45000,
+  retryWrites: true,
+  retryReads: true,
+  heartbeatFrequencyMS: 10000,
+};
+
+// Connection options based on environment
+const mongoOptions = isProduction && renderConfig ? renderConfig.mongodb.options : defaultMongoOptions;
+
+// Handle MongoDB connection string - replace password placeholder if needed
+let mongoUri = process.env.MONGODB_URI || 'mongodb://localhost:27017/mortgage-calculator';
+if (mongoUri.includes('<MONGODB_PASSWORD>') && process.env.MONGODB_PASSWORD) {
+  mongoUri = mongoUri.replace('<MONGODB_PASSWORD>', process.env.MONGODB_PASSWORD);
+}
 
 @Module({
   imports: [
-    ...process.env.DISABLE_DATABASE === 'true' 
-      ? [] 
-      : [
-        MongooseModule.forRootAsync({
-          useFactory: () => {
-            const uri = process.env.MONGODB_URI || 'mongodb://localhost:27017/mortgage-calculator';
-            logger.log(`Connecting to MongoDB: ${uri.substring(0, uri.indexOf('?') > 0 ? uri.indexOf('?') : uri.length)}`);
-            
-            return {
-              uri,
-              retryAttempts: 10,
-              retryDelay: 5000,
-              // Set the timeout options
-              connectionFactory: (connection) => {
-                // Add connection event handlers
-                connection.on('connected', () => {
-                  logger.log('MongoDB connection established successfully');
-                });
-                
-                connection.on('disconnected', () => {
-                  logger.warn('MongoDB disconnected');
-                });
-                
-                connection.on('error', (err: Error) => {
-                  logger.error(`MongoDB connection error: ${err.message}`, err.stack);
-                });
-                
-                // Apply socket timeout settings if not already set in the connection string
-                if (!uri.includes('socketTimeoutMS')) {
-                  logger.log('Setting custom socket timeout parameters');
-                  connection._connectionOptions = {
-                    ...connection._connectionOptions,
-                    socketTimeoutMS: 60000,
-                    connectTimeoutMS: 30000,
-                  };
-                }
-                
-                return connection;
-              }
-            };
-          },
-        })
-      ],
+    MongooseModule.forRoot(mongoUri, mongoOptions),
     MortgageModule,
+    DatabaseModule,
+    HealthModule,
   ],
   controllers: [AppController],
   providers: [AppService],

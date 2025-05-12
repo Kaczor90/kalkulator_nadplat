@@ -32,4 +32,20 @@ services:
       - key: MAX_PDF_SIZE
         value: 10485760
       - key: MONGODB_URI
-        value: mongodb+srv://radekdsa:Kaczor1990%21%40%23@cluster0.h9egut1.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0 
+        value: "mongodb+srv://radekdsa:<MONGODB_PASSWORD>@cluster0.h9egut1.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
+      # Add debug options for easier troubleshooting
+      - key: DEBUG
+        value: "true"
+      # Mongoose connection retry options
+      - key: MONGOOSE_DEBUG
+        value: "true"
+      # Other MongoDB related configs
+      - key: TZ
+        value: "UTC"
+      - key: MONGODB_PASSWORD
+        sync: false
+
+databases:
+  - name: mortgage-calculator-db
+    databaseName: mortgage-calculator
+    plan: free 

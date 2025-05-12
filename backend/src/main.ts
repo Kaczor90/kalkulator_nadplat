@@ -2,15 +2,18 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { ValidationPipe, Logger } from '@nestjs/common';
-import { join } from 'path';
-import { NestExpressApplication } from '@nestjs/platform-express';
+import * as mongoose from 'mongoose';
 
 async function bootstrap() {
-  const logger = new Logger('Bootstrap');
-  logger.log(`Starting application with MongoDB URI: ${process.env.MONGODB_URI ? 'provided' : 'not provided'}`);
-  
+  // Set up global Mongoose debug mode if needed
+  if (process.env.MONGOOSE_DEBUG === 'true') {
+    mongoose.set('debug', true);
+  }
+
   try {
-    const app = await NestFactory.create<NestExpressApplication>(AppModule);
+    const app = await NestFactory.create(AppModule, {
+      logger: ['error', 'warn', 'log', 'debug', 'verbose'],
+    });
     
     // Configure CORS
     app.enableCors({
@@ -22,7 +25,6 @@ async function bootstrap() {
         // Render.com domains
         'https://mortgage-calculator-frontend.onrender.com',
         'https://mortgage-calculator-backend.onrender.com',
-        'https://mortgage-calculator.onrender.com',
         // Allow any subdomain of onrender.com
         /.+\.onrender\.com$/
       ],
@@ -30,9 +32,6 @@ async function bootstrap() {
       credentials: true,
       allowedHeaders: 'Content-Type,Authorization,X-Requested-With',
     });
-    
-    // Serve static files from public directory
-    app.useStaticAssets(join(process.cwd(), 'public'));
     
     app.setGlobalPrefix('api');
     
@@ -44,7 +43,7 @@ async function bootstrap() {
         forbidNonWhitelisted: true,
       }),
     );
-  
+
     // Set up Swagger documentation
     const config = new DocumentBuilder()
       .setTitle('Mortgage Overpayment Calculator API')
@@ -54,20 +53,34 @@ async function bootstrap() {
     
     const document = SwaggerModule.createDocument(app, config);
     SwaggerModule.setup('api/docs', app, document);
-  
-    // Get port from environment variable
-    const port = process.env.PORT || 3010;
-    logger.log(`Starting application on port: ${port}`);
-    
-    // Listen for connections
-    await app.listen(port);
-    logger.log(`Application is running on: ${await app.getUrl()}`);
+
+    // Try to use port from environment, fallback to 3010
+    const defaultPort = process.env.PORT ?? 3010;
+    try {
+      await app.listen(defaultPort);
+      Logger.log(`Application started on port ${defaultPort}`, 'Bootstrap');
+    } catch (error) {
+      if (error.code === 'EADDRINUSE') {
+        const fallbackPort = 3011;
+        Logger.warn(`Port ${defaultPort} is in use, trying fallback port ${fallbackPort}`, 'Bootstrap');
+        await app.listen(fallbackPort);
+        Logger.log(`Application started on fallback port ${fallbackPort}`, 'Bootstrap');
+      } else {
+        throw error;
+      }
+    }
   } catch (error) {
-    logger.error(`Error during application bootstrap: ${error.message}`, error.stack);
-    throw error;
+    Logger.error(`Failed to start application: ${error.message}`, error.stack, 'Bootstrap');
+    
+    // Check for MongoDB connection errors specifically
+    if (error.name === 'MongoNetworkError' || error.name === 'MongooseServerSelectionError') {
+      Logger.error(
+        'MongoDB connection error. Please check your connection string, network connectivity, and database status.',
+        'Database'
+      );
+    }
+    
+    process.exit(1);
   }
 }
-bootstrap().catch(err => {
-  console.error('Failed to start application', err);
-  process.exit(1);
-});
+bootstrap();
