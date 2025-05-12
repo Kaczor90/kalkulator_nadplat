@@ -12,8 +12,8 @@
     "dev": "npm-run-all --parallel start:frontend start:backend"
   },
   "engines": {
-    "node": ">=20.0.0",
-    "npm": ">=9.0.0"
+    "node": ">=16.0.0",
+    "npm": ">=8.0.0"
   },
   "author": "",
   "license": "ISC",

@@ -1,5 +1,5 @@
 # Build stage
-FROM --platform=linux/amd64 node:20-alpine AS build
+FROM --platform=linux/amd64 node:18-alpine AS build
 WORKDIR /app
 COPY package*.json ./
 RUN npm ci --legacy-peer-deps
@@ -7,7 +7,7 @@ COPY . .
 RUN npm run build
 
 # Development stage - modyfikacja
-FROM --platform=linux/amd64 node:20-alpine AS development
+FROM --platform=linux/amd64 node:18-alpine AS development
 WORKDIR /app
 COPY package*.json ./
 RUN npm install --legacy-peer-deps
@@ -21,7 +21,7 @@ RUN npm run build
 CMD ["node", "dist/main"]
 
 # Production stage
-FROM --platform=linux/amd64 node:20-alpine AS production
+FROM --platform=linux/amd64 node:18-alpine AS production
 WORKDIR /app
 COPY package*.json ./
 RUN npm ci --only=production --legacy-peer-deps
