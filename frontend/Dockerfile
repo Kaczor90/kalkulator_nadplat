@@ -1,10 +1,10 @@
 # Build stage
-FROM node:20-alpine AS build
+FROM --platform=linux/amd64 node:20-alpine AS build
 WORKDIR /app
 
 # Install dependencies with caching
 COPY package*.json ./
-RUN npm install
+RUN npm ci
 
 # Copy source code
 COPY . .
@@ -34,7 +34,7 @@ ENV WDS_SOCKET_PORT=0
 CMD ["npm", "start"]
 
 # Production stage
-FROM nginx:alpine
+FROM --platform=linux/amd64 nginx:alpine AS production
 WORKDIR /usr/share/nginx/html
 
 # Copy built assets from build stage

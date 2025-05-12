@@ -12,7 +12,7 @@ services:
       - frontend
       - backend
     networks:
-      - app-network
+      - mortgage-calculator-network
     restart: unless-stopped
 
   frontend:
@@ -20,16 +20,24 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
-    volumes:
-      - ./frontend:/app
-      - /app/node_modules
+      target: development
     ports:
       - "3000:3000"
     environment:
       - NODE_ENV=development
-      - REACT_APP_API_URL=/api
+      - CHOKIDAR_USEPOLLING=true
+      - WDS_SOCKET_PORT=0
+      - REACT_APP_API_URL=http://localhost/api
+      - PORT=3000
+      # UI settings
+      - REACT_APP_THEME_PRIMARY_COLOR=#2563EB
+      - REACT_APP_THEME_SECONDARY_COLOR=#10B981
+      - GENERATE_SOURCEMAP=false
+    mem_limit: 2g
+    depends_on:
+      - backend
     networks:
-      - app-network
+      - mortgage-calculator-network
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "wget", "-q", "--spider", "http://localhost:3000"]
@@ -37,25 +45,26 @@ services:
       timeout: 10s
       retries: 3
       start_period: 30s
-    command: npm start
 
   backend:
     container_name: mortgage-calculator-backend
     build:
       context: ./backend
       dockerfile: Dockerfile
-    volumes:
-      - ./backend:/app
-      - /app/node_modules
+      target: development
     ports:
       - "3010:3010"
     environment:
       - NODE_ENV=development
-      - MONGODB_URI=mongodb://mongo:27017/kalkulator
+      - MONGODB_URI=mongodb://db:27017/mortgage-calculator
+      - PORT=3010
+      # Performance settings
+      - MAX_PDF_SIZE=10485760 # 10MB in bytes
     depends_on:
-      - mongo
+      db:
+        condition: service_healthy
     networks:
-      - app-network
+      - mortgage-calculator-network
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "wget", "-q", "--spider", "http://localhost:3010/api/health"]
@@ -63,17 +72,16 @@ services:
       timeout: 10s
       retries: 3
       start_period: 20s
-    command: npm run start:dev
 
-  mongo:
+  db:
     container_name: mortgage-calculator-db
     image: mongo:latest
     volumes:
-      - ./db/data:/data/db
+      - mortgage-calculator-data:/data/db
     ports:
       - "27017:27017"
     networks:
-      - app-network
+      - mortgage-calculator-network
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
@@ -83,7 +91,7 @@ services:
       start_period: 10s
 
 networks:
-  app-network:
+  mortgage-calculator-network:
     driver: bridge
 
 volumes:

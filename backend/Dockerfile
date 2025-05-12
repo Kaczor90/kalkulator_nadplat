@@ -1,23 +1,30 @@
 # Build stage
-FROM node:20-alpine AS build
-
+FROM --platform=linux/amd64 node:20-alpine AS build
 WORKDIR /app
-
 COPY package*.json ./
-RUN npm install
-
+RUN npm ci --legacy-peer-deps
 COPY . .
 RUN npm run build
 
-# Production stage
-FROM node:20-alpine
-
+# Development stage - modyfikacja
+FROM --platform=linux/amd64 node:20-alpine AS development
 WORKDIR /app
+COPY package*.json ./
+RUN npm install --legacy-peer-deps
 
-COPY --from=build /app/package*.json ./
+# Kopiuję cały kod źródłowy
+COPY . .
+# Ensure the build runs
+RUN npm run build
+
+# Uruchamiam aplikację
+CMD ["node", "dist/main"]
+
+# Production stage
+FROM --platform=linux/amd64 node:20-alpine AS production
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci --only=production --legacy-peer-deps
 COPY --from=build /app/dist ./dist
-COPY --from=build /app/node_modules ./node_modules
-
-EXPOSE 3001
-
+EXPOSE 3010
 CMD ["node", "dist/main"] 

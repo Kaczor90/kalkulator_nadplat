@@ -1,7 +1,20 @@
 {
+  "name": "kalkulator-nadplat",
+  "version": "1.0.0",
+  "description": "Kalkulator nadpłat kredytu hipotecznego",
   "scripts": {
-    "start": "cd backend && npm run start",
-    "start:dev": "cd backend && npm run start:dev"
+    "install:all": "npm install && cd frontend && npm install && cd ../backend && npm install",
+    "build:frontend": "cd frontend && npm run build",
+    "build:backend": "cd backend && npm run build",
+    "build": "npm run build:frontend && npm run build:backend",
+    "start:frontend": "cd frontend && npm start",
+    "start:backend": "cd backend && npm run start:prod",
+    "dev": "npm-run-all --parallel start:frontend start:backend"
+  },
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "npm-run-all": "^4.1.5"
   },
   "dependencies": {
     "apexcharts": "^4.7.0",

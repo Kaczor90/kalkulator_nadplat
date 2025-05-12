@@ -144,6 +144,35 @@ Po uruchomieniu:
 - Dokumentacja API (Swagger): http://localhost/api/docs
 - Baza danych MongoDB jest dostępna pod adresem: mongodb://localhost:27017
 
+## Wdrożenie na render.com
+
+Aplikacja jest skonfigurowana do wdrożenia na platformie render.com. Proces wdrożenia jest zautomatyzowany dzięki plikowi `render.yaml`.
+
+### Kroki wdrożenia
+
+1. Utwórz konto na [render.com](https://render.com) jeśli jeszcze go nie masz
+2. Połącz swoje konto render.com z repozytorium GitHub
+3. Na dashboardzie render.com wybierz "New Blueprint Instance"
+4. Wybierz swoje repozytorium GitHub z aplikacją
+5. render.com automatycznie wykryje plik `render.yaml` i skonfiguruje usługi:
+   * Frontend (aplikacja statyczna)
+   * Backend (serwer NestJS)
+   * Baza danych MongoDB
+
+### Monitorowanie i zarządzanie
+
+Po wdrożeniu aplikacji możesz:
+* Monitorować logi swoich usług w panelu render.com
+* Skonfigurować domeny niestandardowe (custom domains)
+* Skalować swoją aplikację w razie potrzeby
+* Ustawić zmienne środowiskowe bezpośrednio w panelu render.com
+
+### Ograniczenia wersji darmowej
+
+* MongoDB w darmowym planie ma limit 256MB danych
+* Usługi web automatycznie usypiają po okresie nieaktywności
+* Istnieją ograniczenia co do liczby wywołań API w wersji darmowej
+
 ## Material UI v7
 
 Aplikacja używa najnowszej wersji Material UI v7, która wprowadza kilka istotnych zmian:

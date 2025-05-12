@@ -12,7 +12,7 @@ services:
       - frontend
       - backend
     networks:
-      - app-network
+      - mortgage-calculator-network
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "wget", "-q", "--spider", "http://localhost:80"]
@@ -25,10 +25,11 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
-    environment:
-      - NODE_ENV=production
+      target: production
+      args:
+        - REACT_APP_API_URL=/api
     networks:
-      - app-network
+      - mortgage-calculator-network
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "wget", "-q", "--spider", "http://localhost:80"]
@@ -41,13 +42,15 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
+      target: production
     environment:
       - NODE_ENV=production
-      - MONGODB_URI=mongodb://mongo:27017/kalkulator
+      - MONGODB_URI=mongodb://db:27017/mortgage-calculator
+      - MAX_PDF_SIZE=10485760 # 10MB in bytes
     depends_on:
-      - mongo
+      - db
     networks:
-      - app-network
+      - mortgage-calculator-network
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "wget", "-q", "--spider", "http://localhost:3010/api/health"]
@@ -55,12 +58,13 @@ services:
       timeout: 10s
       retries: 3
 
-  mongo:
+  db:
+    container_name: mortgage-calculator-db
     image: mongo:latest
     volumes:
-      - mongodb_data:/data/db
+      - mortgage-calculator-data:/data/db
     networks:
-      - app-network
+      - mortgage-calculator-network
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
@@ -69,9 +73,9 @@ services:
       retries: 3
 
 networks:
-  app-network:
+  mortgage-calculator-network:
     driver: bridge
 
 volumes:
-  mongodb_data:
+  mortgage-calculator-data:
     driver: local 

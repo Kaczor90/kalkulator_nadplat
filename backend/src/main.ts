@@ -12,7 +12,12 @@ async function bootstrap() {
       'http://localhost:3000',
       'http://localhost',
       'http://frontend:3000',
-      'http://mortgage-calculator-frontend:3000'
+      'http://mortgage-calculator-frontend:3000',
+      // Render.com domains
+      'https://mortgage-calculator-frontend.onrender.com',
+      'https://mortgage-calculator-backend.onrender.com',
+      // Allow any subdomain of onrender.com
+      /.+\.onrender\.com$/
     ],
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
     credentials: true,
@@ -40,7 +45,7 @@ async function bootstrap() {
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api/docs', app, document);
 
-  // Try to use port 3010, fallback to 3011 if occupied
+  // Try to use port from environment, fallback to 3010
   const defaultPort = process.env.PORT ?? 3010;
   try {
     await app.listen(defaultPort);

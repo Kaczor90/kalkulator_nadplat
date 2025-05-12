@@ -1,16 +1,20 @@
 version: '3.8'
 
 services:
-  mongo:
-    image: mongo:latest
+  db:
+    container_name: mortgage-calculator-db
+    image: mongo:4.4
     ports:
-      - "27017:27017"
-    volumes:
-      - ./db/data:/data/db
+      - "27018:27017"
     networks:
-      - db-network
+      - mortgage-calculator-network
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "mongo", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
 
 networks:
-  db-network:
+  mortgage-calculator-network:
     driver: bridge 
