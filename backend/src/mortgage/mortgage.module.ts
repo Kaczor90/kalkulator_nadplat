@@ -6,9 +6,14 @@ import { MortgageCalculationSchema } from './schemas/mortgage-calculation.schema
 
 @Module({
   imports: [
-    MongooseModule.forFeature([
-      { name: 'MortgageCalculation', schema: MortgageCalculationSchema },
-    ]),
+    ...(process.env.DISABLE_DATABASE === 'true' 
+      ? [] 
+      : [
+        MongooseModule.forFeature([
+          { name: 'MortgageCalculation', schema: MortgageCalculationSchema },
+        ])
+      ]
+    ),
   ],
   controllers: [MortgageController],
   providers: [MortgageService],

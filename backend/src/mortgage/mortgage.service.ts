@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger, Optional } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { 
@@ -16,13 +16,33 @@ import { v4 as uuidv4 } from 'uuid';
 
 @Injectable()
 export class MortgageService {
+  private readonly logger = new Logger(MortgageService.name);
+  private readonly useDatabase: boolean;
+
   constructor(
-    @InjectModel('MortgageCalculation')
-    private mortgageCalculationModel: Model<MortgageCalculationDocument>,
-  ) {}
+    @Optional() @InjectModel('MortgageCalculation')
+    private mortgageCalculationModel?: Model<MortgageCalculationDocument>,
+  ) {
+    this.useDatabase = !!this.mortgageCalculationModel;
+    this.logger.log(`MortgageService initialized with database: ${this.useDatabase}`);
+  }
 
   async calculateMortgage(params: CalculationParams): Promise<MortgageCalculation> {
     const result = this.performCalculation(params);
+    
+    if (!this.useDatabase || !this.mortgageCalculationModel) {
+      this.logger.warn('Database is disabled, returning in-memory result');
+      const id = uuidv4();
+      const now = new Date();
+      
+      return {
+        id,
+        createdAt: now,
+        updatedAt: now,
+        params,
+        result,
+      };
+    }
     
     const calculation = await this.mortgageCalculationModel.create({
       params,
@@ -39,6 +59,11 @@ export class MortgageService {
   }
 
   async findById(id: string): Promise<MortgageCalculation | null> {
+    if (!this.useDatabase || !this.mortgageCalculationModel) {
+      this.logger.warn('Database is disabled, cannot find by ID');
+      return null;
+    }
+    
     const calculation = await this.mortgageCalculationModel.findById(id).exec();
     
     if (!calculation) {
@@ -55,6 +80,11 @@ export class MortgageService {
   }
 
   async findAll(): Promise<MortgageCalculation[]> {
+    if (!this.useDatabase || !this.mortgageCalculationModel) {
+      this.logger.warn('Database is disabled, returning empty list');
+      return [];
+    }
+    
     const calculations = await this.mortgageCalculationModel.find().exec();
     
     return calculations.map(calculation => ({
@@ -66,7 +96,7 @@ export class MortgageService {
     }));
   }
 
-  private performCalculation(params: CalculationParams): CalculationResult {
+  protected performCalculation(params: CalculationParams): CalculationResult {
     console.log('Rozpoczynam obliczenia dla typu nadpłaty:', params.overpaymentEffect);
     
     if (params.overpaymentEffect === 'progressive_overpayment') {
