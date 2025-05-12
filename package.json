@@ -1,0 +1,11 @@
+{
+  "scripts": {
+    "start": "cd backend && npm run start",
+    "start:dev": "cd backend && npm run start:dev"
+  },
+  "dependencies": {
+    "apexcharts": "^4.7.0",
+    "react-apexcharts": "^1.7.0",
+    "recharts": "^2.15.3"
+  }
+}
