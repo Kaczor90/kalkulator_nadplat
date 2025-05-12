@@ -6,8 +6,8 @@ module.exports = {
   // Mongo configuration for render.com
   // This is used to adjust connection parameters based on render.com environment
   mongodb: {
-    // Use the MONGODB_URI environment variable provided by render.com
-    uri: process.env.MONGODB_URI,
+    // MongoDB Atlas connection string
+    uri: process.env.MONGODB_URI || "mongodb+srv://radekdsa:<MONGODB_PASSWORD>@cluster0.h9egut1.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0",
     
     // Add options specific to render.com deployment
     options: {
@@ -24,7 +24,14 @@ module.exports = {
       retryReads: true,
       maxPoolSize: 10, // Limit connection pool size for render.com
       minPoolSize: 1,
-      maxIdleTimeMS: 45000, // Close idle connections after 45 seconds
+      maxIdleTimeMS: 45000, // Close idle connections after 45 seconds,
+      
+      // ServerApi configuration from the provided example
+      serverApi: {
+        version: '1', // ServerApiVersion.v1
+        strict: true,
+        deprecationErrors: true
+      }
     }
   }
 };

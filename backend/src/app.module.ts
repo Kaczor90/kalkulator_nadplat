@@ -72,8 +72,22 @@ const mongoOptions = (isProduction &&
   ? renderConfig.mongodb.options 
   : defaultMongoOptions;
 
+// Choose MongoDB URI based on environment
+// Development environment uses local MongoDB
+// Production environment uses cloud MongoDB
+let mongoUri;
+if (isProduction) {
+  // Use cloud MongoDB in production
+  mongoUri = process.env.MONGODB_URI || 
+    (renderConfig && renderConfig.mongodb && renderConfig.mongodb.uri) || 
+    "mongodb+srv://radekdsa:<MONGODB_PASSWORD>@cluster0.h9egut1.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0";
+} else {
+  // Use local MongoDB in development
+  mongoUri = 'mongodb://localhost:27017/mortgage-calculator';
+  console.log('Using local MongoDB for development environment');
+}
+
 // Handle MongoDB connection string - replace password placeholder if needed
-let mongoUri = process.env.MONGODB_URI || 'mongodb://localhost:27017/mortgage-calculator';
 if (mongoUri.includes('<MONGODB_PASSWORD>') && process.env.MONGODB_PASSWORD) {
   mongoUri = mongoUri.replace('<MONGODB_PASSWORD>', process.env.MONGODB_PASSWORD);
 }

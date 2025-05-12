@@ -43,6 +43,7 @@ services:
       - key: TZ
         value: "UTC"
       - key: MONGODB_PASSWORD
+        value: "Kaczor1990!@#"
         sync: false
 
 databases:

@@ -13,12 +13,20 @@ export class DatabaseLogger {
     }
 
     // Listen to Mongoose connection events
-    mongoose.connection.on('connected', () => {
+    mongoose.connection.on('connected', async () => {
       this.logger.log('MongoDB connection established successfully');
       
       // Log additional connection information for debugging
       const { host, port, name } = mongoose.connection;
       this.logger.log(`Connected to MongoDB at ${host}:${port}/${name}`);
+      
+      // Try to ping the database to confirm connection
+      try {
+        await mongoose.connection.db.admin().ping();
+        this.logger.log('✅ MongoDB ping successful - confirmed connection is working');
+      } catch (error) {
+        this.logger.error(`MongoDB ping failed: ${error.message}`, error.stack);
+      }
     });
 
     mongoose.connection.on('disconnected', () => {
