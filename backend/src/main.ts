@@ -1,62 +1,73 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
-import { ValidationPipe } from '@nestjs/common';
+import { ValidationPipe, Logger } from '@nestjs/common';
 import { join } from 'path';
 import { NestExpressApplication } from '@nestjs/platform-express';
 
 async function bootstrap() {
-  const app = await NestFactory.create<NestExpressApplication>(AppModule);
+  const logger = new Logger('Bootstrap');
+  logger.log(`Starting application with MongoDB URI: ${process.env.MONGODB_URI ? 'provided' : 'not provided'}`);
   
-  // Configure CORS
-  app.enableCors({
-    origin: [
-      'http://localhost:3000',
-      'http://localhost',
-      'http://frontend:3000',
-      'http://mortgage-calculator-frontend:3000',
-      // Render.com domains
-      'https://mortgage-calculator-frontend.onrender.com',
-      'https://mortgage-calculator-backend.onrender.com',
-      'https://mortgage-calculator.onrender.com',
-      // Allow any subdomain of onrender.com
-      /.+\.onrender\.com$/
-    ],
-    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
-    credentials: true,
-    allowedHeaders: 'Content-Type,Authorization,X-Requested-With',
-  });
+  try {
+    const app = await NestFactory.create<NestExpressApplication>(AppModule);
+    
+    // Configure CORS
+    app.enableCors({
+      origin: [
+        'http://localhost:3000',
+        'http://localhost',
+        'http://frontend:3000',
+        'http://mortgage-calculator-frontend:3000',
+        // Render.com domains
+        'https://mortgage-calculator-frontend.onrender.com',
+        'https://mortgage-calculator-backend.onrender.com',
+        'https://mortgage-calculator.onrender.com',
+        // Allow any subdomain of onrender.com
+        /.+\.onrender\.com$/
+      ],
+      methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
+      credentials: true,
+      allowedHeaders: 'Content-Type,Authorization,X-Requested-With',
+    });
+    
+    // Serve static files from public directory
+    app.useStaticAssets(join(process.cwd(), 'public'));
+    
+    app.setGlobalPrefix('api');
+    
+    // Set up validation
+    app.useGlobalPipes(
+      new ValidationPipe({
+        transform: true,
+        whitelist: true,
+        forbidNonWhitelisted: true,
+      }),
+    );
   
-  // Serve static files from public directory
-  app.useStaticAssets(join(process.cwd(), 'public'));
+    // Set up Swagger documentation
+    const config = new DocumentBuilder()
+      .setTitle('Mortgage Overpayment Calculator API')
+      .setDescription('API for calculating mortgage overpayments')
+      .setVersion('1.0')
+      .build();
+    
+    const document = SwaggerModule.createDocument(app, config);
+    SwaggerModule.setup('api/docs', app, document);
   
-  app.setGlobalPrefix('api');
-  
-  // Set up validation
-  app.useGlobalPipes(
-    new ValidationPipe({
-      transform: true,
-      whitelist: true,
-      forbidNonWhitelisted: true,
-    }),
-  );
-
-  // Set up Swagger documentation
-  const config = new DocumentBuilder()
-    .setTitle('Mortgage Overpayment Calculator API')
-    .setDescription('API for calculating mortgage overpayments')
-    .setVersion('1.0')
-    .build();
-  
-  const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('api/docs', app, document);
-
-  // Get port from environment variable
-  const port = process.env.PORT || 3010;
-  console.log(`Starting application on port: ${port}`);
-  
-  // Listen for connections
-  await app.listen(port);
-  console.log(`Application is running on: ${await app.getUrl()}`);
+    // Get port from environment variable
+    const port = process.env.PORT || 3010;
+    logger.log(`Starting application on port: ${port}`);
+    
+    // Listen for connections
+    await app.listen(port);
+    logger.log(`Application is running on: ${await app.getUrl()}`);
+  } catch (error) {
+    logger.error(`Error during application bootstrap: ${error.message}`, error.stack);
+    throw error;
+  }
 }
-bootstrap();
+bootstrap().catch(err => {
+  console.error('Failed to start application', err);
+  process.exit(1);
+});

@@ -13,17 +13,14 @@ services:
         value: 10000
       - key: MAX_PDF_SIZE
         value: 10485760
+      - key: DEBUG
+        value: "mongoose:*"
+      # Adnotacja: rzeczywisty URI MongoDB należy ustawić w dashboardzie render.com
+      # To jest tylko przykładowy template
       - key: MONGODB_URI
-        fromDatabase:
-          name: mortgage-calculator-db
-          property: connectionString
-          append: "?authSource=admin&retryWrites=true&w=majority"
+        value: "mongodb+srv://username:password@cluster.mongodb.net/mortgage-calculator?retryWrites=true&w=majority"
+        sync: false
       - key: REACT_APP_THEME_PRIMARY_COLOR
         value: "#2563EB"
       - key: REACT_APP_THEME_SECONDARY_COLOR
-        value: "#10B981"
-
-databases:
-  - name: mortgage-calculator-db
-    databaseName: mortgage-calculator
-    plan: free 
+        value: "#10B981" 
