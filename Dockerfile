@@ -2,13 +2,13 @@
 FROM --platform=linux/amd64 node:18-alpine AS base
 WORKDIR /app
 COPY package*.json ./
-RUN npm install
+RUN npm install --no-audit --no-fund
 
 # Build frontend
 FROM base AS frontend-builder
 WORKDIR /app/frontend
 COPY frontend/package*.json ./
-RUN npm install
+RUN npm install --no-audit --no-fund --legacy-peer-deps
 COPY frontend/ ./
 ENV REACT_APP_API_URL=/api
 ENV GENERATE_SOURCEMAP=false
@@ -18,7 +18,7 @@ RUN npm run build
 FROM base AS backend-builder
 WORKDIR /app/backend
 COPY backend/package*.json ./
-RUN npm install
+RUN npm install --no-audit --no-fund --legacy-peer-deps
 COPY backend/ ./
 RUN npm run build
 
@@ -32,7 +32,8 @@ COPY --from=frontend-builder /app/frontend/build ./public
 # Copy backend build and packages
 COPY --from=backend-builder /app/backend/dist ./dist
 COPY --from=backend-builder /app/backend/package*.json ./
-RUN npm install --production
+RUN npm install --production --no-audit --no-fund --legacy-peer-deps && \
+    npm cache clean --force
 
 # Set environment variables
 ENV NODE_ENV=production

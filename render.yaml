@@ -5,6 +5,7 @@ services:
     env: docker
     dockerfilePath: ./Dockerfile
     plan: free
+    startCommand: node dist/main.js
     envVars:
       - key: NODE_ENV
         value: production
@@ -16,6 +17,7 @@ services:
         fromDatabase:
           name: mortgage-calculator-db
           property: connectionString
+          append: "?authSource=admin&retryWrites=true&w=majority"
       - key: REACT_APP_THEME_PRIMARY_COLOR
         value: "#2563EB"
       - key: REACT_APP_THEME_SECONDARY_COLOR
