@@ -1,31 +1,10 @@
 services:
-  # Frontend web service
+  # Monolithic web service (frontend + backend)
   - type: web
-    name: mortgage-calculator-frontend
-    env: static
-    buildCommand: npm install && cd frontend && npm install && npm run build
-    staticPublishPath: frontend/build
-    envVars:
-      - key: REACT_APP_API_URL
-        fromService:
-          name: mortgage-calculator-backend
-          type: web
-          property: url
-        sync: false
-      - key: REACT_APP_THEME_PRIMARY_COLOR
-        value: "#2563EB"
-      - key: REACT_APP_THEME_SECONDARY_COLOR
-        value: "#10B981"
-
-  # Backend API service
-  - type: web
-    name: mortgage-calculator-backend
-    env: node
+    name: mortgage-calculator
+    env: docker
+    dockerfilePath: ./Dockerfile
     plan: free
-    runtime: node
-    nodeVersion: 18.x
-    buildCommand: cd backend && npm install && npm run build
-    startCommand: cd backend && npm run start:prod
     envVars:
       - key: NODE_ENV
         value: production
@@ -37,6 +16,10 @@ services:
         fromDatabase:
           name: mortgage-calculator-db
           property: connectionString
+      - key: REACT_APP_THEME_PRIMARY_COLOR
+        value: "#2563EB"
+      - key: REACT_APP_THEME_SECONDARY_COLOR
+        value: "#10B981"
 
 databases:
   - name: mortgage-calculator-db

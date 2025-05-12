@@ -2,9 +2,11 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { ValidationPipe } from '@nestjs/common';
+import { join } from 'path';
+import { NestExpressApplication } from '@nestjs/platform-express';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create<NestExpressApplication>(AppModule);
   
   // Configure CORS
   app.enableCors({
@@ -16,6 +18,7 @@ async function bootstrap() {
       // Render.com domains
       'https://mortgage-calculator-frontend.onrender.com',
       'https://mortgage-calculator-backend.onrender.com',
+      'https://mortgage-calculator.onrender.com',
       // Allow any subdomain of onrender.com
       /.+\.onrender\.com$/
     ],
@@ -23,6 +26,9 @@ async function bootstrap() {
     credentials: true,
     allowedHeaders: 'Content-Type,Authorization,X-Requested-With',
   });
+  
+  // Serve static files from public directory
+  app.useStaticAssets(join(process.cwd(), 'public'));
   
   app.setGlobalPrefix('api');
   
