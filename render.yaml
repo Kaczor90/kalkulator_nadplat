@@ -1,11 +1,29 @@
 services:
-  # Monolithic web service (frontend + backend)
+  # Frontend web service
   - type: web
-    name: mortgage-calculator
-    env: docker
-    dockerfilePath: ./Dockerfile
-    plan: free
-    startCommand: node dist/main.js
+    name: mortgage-calculator-frontend
+    env: static
+    buildCommand: cd frontend && npm install && npm run build
+    staticPublishPath: ./frontend/build
+    envVars:
+      - key: REACT_APP_API_URL
+        fromService:
+          name: mortgage-calculator-backend
+          type: web
+          property: url
+        sync: false
+      - key: REACT_APP_THEME_PRIMARY_COLOR
+        value: "#2563EB"
+      - key: REACT_APP_THEME_SECONDARY_COLOR
+        value: "#10B981"
+
+  # Backend API service
+  - type: web
+    name: mortgage-calculator-backend
+    env: node
+    plan: starter
+    buildCommand: cd backend && npm install && npm run build
+    startCommand: cd backend && npm run start:prod
     envVars:
       - key: NODE_ENV
         value: production
@@ -13,11 +31,5 @@ services:
         value: 10000
       - key: MAX_PDF_SIZE
         value: 10485760
-      - key: DEBUG
-        value: "mongoose:*"
-      - key: DISABLE_DATABASE
-        value: "true"
-      - key: REACT_APP_THEME_PRIMARY_COLOR
-        value: "#2563EB"
-      - key: REACT_APP_THEME_SECONDARY_COLOR
-        value: "#10B981" 
+      - key: MONGODB_URI
+        value: mongodb+srv://radekdsa:Kaczor1990%21%40%23@cluster0.h9egut1.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0 
