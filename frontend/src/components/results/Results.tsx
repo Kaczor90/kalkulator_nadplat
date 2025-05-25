@@ -14,7 +14,8 @@ import {
   Link as MuiLink,
   Card,
   CardContent,
-  Alert
+  Alert,
+  Chip
 } from '@mui/material';
 import { useGetMortgageCalculationQuery } from '../../store/api';
 import ResultSummary from './ResultSummary';
@@ -25,6 +26,8 @@ import { useNavigate, useParams, Link } from 'react-router-dom';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import CalculateIcon from '@mui/icons-material/Calculate';
 import FileDownloadIcon from '@mui/icons-material/FileDownload';
+import CloudOffIcon from '@mui/icons-material/CloudOff';
+import CloudIcon from '@mui/icons-material/Cloud';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 import { format } from 'date-fns';
@@ -44,10 +47,46 @@ const isRefinanceResult = (result: any): result is RefinanceResult => {
 
 const Results: React.FC = () => {
   const { calculationId } = useParams<{ calculationId: string }>();
-  const { data, isLoading, error } = useGetMortgageCalculationQuery(calculationId || '');
   const navigate = useNavigate();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  
+  // Sprawdź czy to lokalny wynik
+  const isLocalResult = calculationId?.startsWith('local');
+  
+  // Stan dla lokalnych wyników
+  const [localData, setLocalData] = React.useState<MortgageCalculation | null>(null);
+  const [localError, setLocalError] = React.useState<string | null>(null);
+  
+  // Pobierz dane z API tylko jeśli to nie jest lokalny wynik
+  const { data: apiData, isLoading, error } = useGetMortgageCalculationQuery(
+    calculationId || '', 
+    { skip: !calculationId || isLocalResult }
+  );
+  
+  // Załaduj lokalne dane jeśli potrzeba
+  React.useEffect(() => {
+    if (isLocalResult && calculationId) {
+      try {
+        const storedData = localStorage.getItem(`calculation-${calculationId}`);
+        if (storedData) {
+          const parsedData = JSON.parse(storedData);
+          setLocalData(parsedData);
+          console.log('Załadowano lokalne dane:', parsedData);
+        } else {
+          setLocalError('Nie znaleziono lokalnych danych obliczenia.');
+        }
+      } catch (error) {
+        console.error('Błąd podczas ładowania lokalnych danych:', error);
+        setLocalError('Błąd podczas ładowania lokalnych danych.');
+      }
+    }
+  }, [isLocalResult, calculationId]);
+  
+  // Wybierz odpowiednie dane
+  const data = isLocalResult ? localData : apiData;
+  const dataError = isLocalResult ? localError : error;
+  const dataLoading = isLocalResult ? false : isLoading;
   
   // Sprawdzenie typu otrzymanych danych
   const isRefinance = data ? isRefinanceResult(data) : false;
@@ -119,6 +158,29 @@ const Results: React.FC = () => {
       const margin = { top: 10, right: 10, bottom: 15, left: 10 };
       const contentWidth = pdfWidth - margin.left - margin.right;
 
+      // Load and add logo to PDF
+      console.log('Loading logo for PDF...');
+      let logoLoaded = false;
+      try {
+        const logoResponse = await fetch('/logo192.png');
+        if (logoResponse.ok) {
+          const logoBlob = await logoResponse.blob();
+          const logoDataUrl = await new Promise<string>((resolve) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result as string);
+            reader.readAsDataURL(logoBlob);
+          });
+          
+          // Add logo to PDF (top left)
+          const logoSize = 15; // 15mm
+          pdf.addImage(logoDataUrl, 'PNG', margin.left, margin.top, logoSize, logoSize);
+          logoLoaded = true;
+          console.log('Logo loaded successfully to PDF.');
+        }
+      } catch (logoError) {
+        console.warn('Could not load logo for PDF:', logoError);
+      }
+
       // Page 1: Summary, Savings, Charts
       console.log('Rendering Page 1: Generation Date');
       try {
@@ -131,12 +193,23 @@ const Results: React.FC = () => {
           margin.top,
           { align: 'right' }
         );
+        
+        // Add title next to logo if logo was loaded
+        if (logoLoaded) {
+          pdf.setFontSize(12);
+          if (fontConfig.useFont === 'Roboto') {
+            pdf.setFont('Roboto-Bold');
+          } else {
+            pdf.setFont(fontConfig.useFont, 'bold');
+          }
+          pdf.text('Raport Kalkulatora Kredytu', margin.left + 18, margin.top + 8);
+        }
       } catch (headerError) {
         console.error('Error rendering header:', headerError);
         throw new Error('Błąd podczas generowania nagłówka raportu');
       }
 
-      let yPosition = margin.top + 5;
+      let yPosition = margin.top + (logoLoaded ? 20 : 5);
 
       // Render each section with error handling
       const sections = [
@@ -357,7 +430,7 @@ const Results: React.FC = () => {
     }
   };
 
-  if (isLoading) {
+  if (dataLoading) {
     return (
       <Container sx={{ py: 8, textAlign: 'center' }}>
         <Fade in={true} timeout={800}>
@@ -372,7 +445,7 @@ const Results: React.FC = () => {
     );
   }
 
-  if (error || !data) {
+  if (dataError || !data) {
     return (
       <Container sx={{ py: 8 }}>
         <Fade in={true} timeout={600}>
@@ -451,16 +524,26 @@ const Results: React.FC = () => {
               flexDirection: { xs: 'column', sm: 'row' },
               gap: 2
             }}>
-              <Typography 
-                variant="h4" 
-                component="h1" 
-                sx={{ 
-                  fontWeight: 700,
-                  color: 'text.primary'
-                }}
-              >
-                Wyniki symulacji kredytu
-              </Typography>
+              <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                <Typography 
+                  variant="h4" 
+                  component="h1" 
+                  sx={{ 
+                    fontWeight: 700,
+                    color: 'text.primary',
+                    mr: 2
+                  }}
+                >
+                  Wyniki symulacji kredytu
+                </Typography>
+                <Chip
+                  icon={isLocalResult ? <CloudOffIcon /> : <CloudIcon />}
+                  label={isLocalResult ? 'Obliczenia lokalne' : 'Obliczenia online'}
+                  color={isLocalResult ? 'warning' : 'primary'}
+                  variant="outlined"
+                  size="small"
+                />
+              </Box>
               
               <Button
                 variant="outlined"

@@ -53,18 +53,18 @@ const SavingsInfo: React.FC<Props> = ({ result, overpaymentEffect }) => {
           flexDirection: { xs: 'column', sm: 'row' },
           textAlign: { xs: 'center', sm: 'left' },
         }}>
-          <Typography 
-            variant="h6" 
-            component="h3" 
-            sx={{
-              fontWeight: 600,
-              color: theme.palette.primary.dark,
-              mr: { sm: 2 },
-              mb: { xs: 1, sm: 0 },
-            }}
-          >
-            Twoje oszczędności dzięki nadpłatom
-          </Typography>
+          <Box sx={{ display: 'flex', alignItems: 'center', mr: { sm: 2 }, mb: { xs: 1, sm: 0 } }}>
+            <Typography 
+              variant="h6" 
+              component="h3" 
+              sx={{
+                fontWeight: 600,
+                color: theme.palette.primary.dark,
+              }}
+            >
+              Twoje oszczędności dzięki nadpłatom
+            </Typography>
+          </Box>
 
           {overpaymentEffect && (
             <Chip 

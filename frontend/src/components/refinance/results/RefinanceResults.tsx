@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   Container,
   Paper,
@@ -17,7 +17,6 @@ import {
   Chip,
   CircularProgress,
   useTheme,
-  Divider,
   Alert,
   AlertTitle,
   IconButton,
@@ -145,7 +144,6 @@ const calculateLocalRefinance = (params: any): RefinanceResult => {
   let startDate: Date | null = null;
   let originalCommissionType = 'percentage';
   let originalCommissionValue = 0;
-  let currentMonthlyInstallment = 0;
   let installmentDayOfMonth = new Date().getDate(); // Default to today's day
   
   // Flag to check if advanced parameters were provided
@@ -241,11 +239,6 @@ const calculateLocalRefinance = (params: any): RefinanceResult => {
       
       if (params.has('originalCommissionValue')) {
         originalCommissionValue = Number(params.get('originalCommissionValue')) || originalCommissionValue;
-        hasAdvancedParams = true;
-      }
-      
-      if (params.has('currentMonthlyInstallment')) {
-        currentMonthlyInstallment = Number(params.get('currentMonthlyInstallment')) || currentMonthlyInstallment;
         hasAdvancedParams = true;
       }
       
@@ -518,52 +511,46 @@ const calculateLocalRefinance = (params: any): RefinanceResult => {
   const netCost = refinancingCosts - commissionRefund;
   const paybackPeriodB = monthlySavings > 0 && netCost > 0 ? Math.ceil(netCost / monthlySavings) : 0;
   
-  // Calculate Variant C (same rate as current but shorter term)
-  // First, calculate how many months it would take with a payment close to original
-  // We'll try to find a shorter term where the payment is similar to the original
+  // Calculate Variant C (refinancing with shorter term)
+  // Find the shortest term where the payment is within the limit (current payment + 0 PLN)
   
-  // Start with a payment slightly higher than the original (e.g., 0.5% higher)
-  const targetMonthlyPayment = currentMonthlyPayment * 1.005;
+  // Maximum allowed installment - HARD LIMIT (rata_aktualna + 0 zł)
+  const PAYMENT_INCREASE_LIMIT = 0; // 0 PLN limit - rata nie może być wyższa niż aktualna
+  const maxAllowedInstallment = currentMonthlyPayment + PAYMENT_INCREASE_LIMIT;
   
-  // Find the shortest term where the payment is close to the target
-  // Start with a reasonable range, e.g., 60% to 100% of the original term
-  let shortestTermC = Math.round(newTotalMonths * 0.6);
-  let longestTermC = newTotalMonths;
-  let optimalTermC = newTotalMonths;
+  // Find the shortest term where payment <= maxAllowedInstallment
+  const MIN_TERM_MONTHS = 12; // Minimum 1 year
+  let optimalTermC = newTotalMonths; // Default to original term
   let optimalPaymentC = 0;
   
-  // Binary search to find the optimal term
-  while (shortestTermC <= longestTermC) {
-    const midTerm = Math.floor((shortestTermC + longestTermC) / 2);
+  // Search from shortest to longest term
+  for (let term = MIN_TERM_MONTHS; term <= newTotalMonths; term++) {
     const paymentForTerm = calculateMonthlyPaymentEqualInstallments(
       finalNewLoanAmount, 
       newDailyRate, 
-      midTerm,
+      term,
       installmentDayOfMonth
     );
     
-    if (Math.abs(paymentForTerm - targetMonthlyPayment) < 0.01) {
-      // Found a very close match
-      optimalTermC = midTerm;
+    // Check if this term gives a payment within our limit
+    if (paymentForTerm <= maxAllowedInstallment) {
+      // This is the first (shortest) term that satisfies our constraint
+      optimalTermC = term;
       optimalPaymentC = paymentForTerm;
+      
+      console.log(`Znaleziono najkrótszy okres spełniający warunki: ${term} miesięcy, rata: ${paymentForTerm.toFixed(2)} zł (limit: ${maxAllowedInstallment.toFixed(2)} zł)`);
+      
+      // Since we're looking for the shortest valid term, break immediately
       break;
-    } else if (paymentForTerm < targetMonthlyPayment) {
-      // Term is too long, payment is too low
-      longestTermC = midTerm - 1;
-    } else {
-      // Term is too short, payment is too high
-      if (paymentForTerm - targetMonthlyPayment < targetMonthlyPayment - optimalPaymentC || optimalPaymentC === 0) {
-        // This term gives a closer payment, update optimal
-        optimalTermC = midTerm;
-        optimalPaymentC = paymentForTerm;
-      }
-      shortestTermC = midTerm + 1;
     }
   }
   
-  // If we didn't find an optimal term, use the shortest that gives a similar payment
+  // If no valid shorter term was found, use original term
   if (optimalPaymentC === 0) {
-    optimalTermC = Math.round(newTotalMonths * 0.85); // Fallback to 85% of original term
+    console.log(`Nie znaleziono krótszego okresu z ratą nieprzekraczającą ${maxAllowedInstallment.toFixed(2)} zł`);
+    console.log(`Używam oryginalnego okresu kredytowania: ${newTotalMonths} miesięcy`);
+    
+    optimalTermC = newTotalMonths;
     optimalPaymentC = calculateMonthlyPaymentEqualInstallments(
       finalNewLoanAmount, 
       newDailyRate, 
@@ -1345,6 +1332,29 @@ const RefinanceResults: React.FC = () => {
       const margin = { top: 10, right: 10, bottom: 15, left: 10 };
       const contentWidth = pdfWidth - margin.left - margin.right;
 
+      // Load and add logo to PDF
+      console.log('Loading logo for PDF...');
+      let logoLoaded = false;
+      try {
+        const logoResponse = await fetch('/logo192.png');
+        if (logoResponse.ok) {
+          const logoBlob = await logoResponse.blob();
+          const logoDataUrl = await new Promise<string>((resolve) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result as string);
+            reader.readAsDataURL(logoBlob);
+          });
+          
+          // Add logo to PDF (top left)
+          const logoSize = 15; // 15mm
+          pdf.addImage(logoDataUrl, 'PNG', margin.left, margin.top, logoSize, logoSize);
+          logoLoaded = true;
+          console.log('Logo loaded successfully to PDF.');
+        }
+      } catch (logoError) {
+        console.warn('Could not load logo for PDF:', logoError);
+      }
+
       // Header with generation date
       console.log('Rendering generation date header');
       try {
@@ -1357,14 +1367,25 @@ const RefinanceResults: React.FC = () => {
           margin.top,
           { align: 'right' }
         );
+        
+        // Add title next to logo if logo was loaded
+        if (logoLoaded) {
+          pdf.setFontSize(12);
+          if (fontConfig.useFont === 'Roboto') {
+            pdf.setFont('Roboto-Bold');
+          } else {
+            pdf.setFont(fontConfig.useFont, 'bold');
+          }
+          pdf.text('Raport Refinansowania Kredytu', margin.left + 18, margin.top + 8);
+        }
       } catch (headerError) {
         console.error('Error rendering header:', headerError);
         throw new Error('Błąd podczas generowania nagłówka raportu');
       }
 
-      let yPosition = margin.top + 5;
+      let yPosition = margin.top + (logoLoaded ? 20 : 5);
 
-      // Title
+      // Title (centered, larger)
       if (fontConfig.useFont === 'Roboto') {
         pdf.setFont('Roboto-Bold');
       } else {
@@ -1503,14 +1524,15 @@ const RefinanceResults: React.FC = () => {
         >
           Powrót do kalkulatora
         </Button>
-        <Typography
-          variant="h4"
-          component="h1"
-          gutterBottom
-          sx={{ fontWeight: 700 }}
-        >
-          Analiza Refinansowania Kredytu
-        </Typography>
+        <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+          <Typography
+            variant="h4"
+            component="h1"
+            sx={{ fontWeight: 700 }}
+          >
+            Analiza Refinansowania Kredytu
+          </Typography>
+        </Box>
         <Typography
           variant="subtitle1"
           sx={{ color: 'text.secondary' }}

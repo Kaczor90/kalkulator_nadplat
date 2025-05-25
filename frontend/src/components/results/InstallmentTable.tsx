@@ -86,13 +86,15 @@ const InstallmentTable: React.FC<Props> = ({ result, onExportPdf, overpaymentEff
         gap: 2,
         px: { xs: 0.5, sm: 1 }
       }}>
-        <Typography 
-          variant="h6" 
-          component="h2"
-          sx={{ fontWeight: 600 }}
-        >
-          Harmonogram spłat
-        </Typography>
+        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+          <Typography 
+            variant="h6" 
+            component="h2"
+            sx={{ fontWeight: 600 }}
+          >
+            Harmonogram spłat
+          </Typography>
+        </Box>
         
         <Stack direction="row" spacing={2}>
           <FormControl variant="outlined" size="small" sx={{ minWidth: 200 }}>

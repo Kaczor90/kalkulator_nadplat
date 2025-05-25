@@ -1,0 +1,9 @@
+{
+  "loanAmount": 300000,
+  "interestRate": 4.5,
+  "loanTermYears": 25,
+  "loanTermMonths": 0,
+  "installmentType": "EQUAL",
+  "startDate": "2025-05-12",
+  "overpayments": []
+} 

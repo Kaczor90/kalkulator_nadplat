@@ -82,8 +82,8 @@ if (isProduction) {
     (renderConfig && renderConfig.mongodb && renderConfig.mongodb.uri) || 
     "mongodb+srv://radekdsa:<MONGODB_PASSWORD>@cluster0.h9egut1.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0";
 } else {
-  // Use local MongoDB in development
-  mongoUri = 'mongodb://localhost:27017/mortgage-calculator';
+  // Use local MongoDB in development - either from environment or default to container name "db"
+  mongoUri = process.env.MONGODB_URI || 'mongodb://db:27017/mortgage-calculator';
   console.log('Using local MongoDB for development environment');
 }
 

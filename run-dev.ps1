@@ -24,6 +24,17 @@ if (-not (Test-Path "backend/.env")) {
     }
 }
 
+# Ensure the backend/.env file has the correct development MongoDB URI
+$envContent = Get-Content -Path "backend/.env" -ErrorAction SilentlyContinue
+if ($envContent) {
+    $updatedContent = $envContent -replace "MONGODB_URI=.*", "MONGODB_URI=mongodb://db:27017/mortgage-calculator"
+    if ($updatedContent -notcontains "MONGODB_URI=") {
+        $updatedContent += "MONGODB_URI=mongodb://db:27017/mortgage-calculator"
+    }
+    Set-Content -Path "backend/.env" -Value $updatedContent
+    Write-Host "Updated backend/.env with local MongoDB URI." -ForegroundColor Green
+}
+
 # Check for existing containers
 $existingContainers = docker ps -a -q --filter "name=mortgage-calculator-*"
 if ($existingContainers) {
@@ -35,6 +46,7 @@ if ($existingContainers) {
 
 # Start application with Docker Compose
 Write-Host "Building and starting containers in DEVELOPMENT mode..." -ForegroundColor Green
+Write-Host "Using local MongoDB at mongodb://db:27017/mortgage-calculator" -ForegroundColor Cyan
 Write-Host "This may take a few minutes for the first build..." -ForegroundColor Yellow
 
 try {

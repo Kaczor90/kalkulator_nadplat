@@ -55,16 +55,17 @@ const ResultSummary: React.FC<Props> = ({ result, overpaymentEffect, mortgageInp
   return (
     <>
       <Box sx={{ mb: 3, px: { xs: 1, sm: 2 } }}>
-        <Typography 
-          variant="h5" 
-          sx={{ 
-            fontWeight: 600, 
-            color: 'text.primary',
-            mb: 1
-          }}
-        >
-          Podsumowanie kalkulacji
-        </Typography>
+        <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+          <Typography 
+            variant="h5" 
+            sx={{ 
+              fontWeight: 600, 
+              color: 'text.primary',
+            }}
+          >
+            Podsumowanie kalkulacji
+          </Typography>
+        </Box>
         <Typography variant="body2" color="text.secondary">
           Zestawienie wyników dla wariantu standardowego i wariantu z nadpłatami
         </Typography>

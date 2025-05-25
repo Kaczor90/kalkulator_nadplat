@@ -1,4 +1,4 @@
-import { Injectable, Logger, Optional } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { 
@@ -16,33 +16,13 @@ import { v4 as uuidv4 } from 'uuid';
 
 @Injectable()
 export class MortgageService {
-  private readonly logger = new Logger(MortgageService.name);
-  private readonly useDatabase: boolean;
-
   constructor(
-    @Optional() @InjectModel('MortgageCalculation')
-    private mortgageCalculationModel?: Model<MortgageCalculationDocument>,
-  ) {
-    this.useDatabase = !!this.mortgageCalculationModel;
-    this.logger.log(`MortgageService initialized with database: ${this.useDatabase}`);
-  }
+    @InjectModel('MortgageCalculation')
+    private mortgageCalculationModel: Model<MortgageCalculationDocument>,
+  ) {}
 
   async calculateMortgage(params: CalculationParams): Promise<MortgageCalculation> {
     const result = this.performCalculation(params);
-    
-    if (!this.useDatabase || !this.mortgageCalculationModel) {
-      this.logger.warn('Database is disabled, returning in-memory result');
-      const id = uuidv4();
-      const now = new Date();
-      
-      return {
-        id,
-        createdAt: now,
-        updatedAt: now,
-        params,
-        result,
-      };
-    }
     
     const calculation = await this.mortgageCalculationModel.create({
       params,
@@ -59,11 +39,6 @@ export class MortgageService {
   }
 
   async findById(id: string): Promise<MortgageCalculation | null> {
-    if (!this.useDatabase || !this.mortgageCalculationModel) {
-      this.logger.warn('Database is disabled, cannot find by ID');
-      return null;
-    }
-    
     const calculation = await this.mortgageCalculationModel.findById(id).exec();
     
     if (!calculation) {
@@ -80,11 +55,6 @@ export class MortgageService {
   }
 
   async findAll(): Promise<MortgageCalculation[]> {
-    if (!this.useDatabase || !this.mortgageCalculationModel) {
-      this.logger.warn('Database is disabled, returning empty list');
-      return [];
-    }
-    
     const calculations = await this.mortgageCalculationModel.find().exec();
     
     return calculations.map(calculation => ({
@@ -96,7 +66,7 @@ export class MortgageService {
     }));
   }
 
-  protected performCalculation(params: CalculationParams): CalculationResult {
+  private performCalculation(params: CalculationParams): CalculationResult {
     console.log('Rozpoczynam obliczenia dla typu nadpłaty:', params.overpaymentEffect);
     
     if (params.overpaymentEffect === 'progressive_overpayment') {
@@ -819,8 +789,8 @@ export class MortgageService {
       const originalMonthlyInstallment = variantA.comparison.monthlyInstallment;
       console.log(`Oryginalna miesięczna rata: ${originalMonthlyInstallment.toFixed(2)} zł`);
       
-      // Maximum allowed installment - HARD LIMIT
-      const PAYMENT_INCREASE_LIMIT = 30; // 30 PLN limit
+      // Maximum allowed installment - HARD LIMIT (rata_aktualna + 0 zł)
+      const PAYMENT_INCREASE_LIMIT = 0; // 0 PLN limit - rata nie może być wyższa niż aktualna
       const maxAllowedInstallment = originalMonthlyInstallment + PAYMENT_INCREASE_LIMIT;
       console.log(`Maksymalna dozwolona rata (oryginalna + ${PAYMENT_INCREASE_LIMIT} zł): ${maxAllowedInstallment.toFixed(2)} zł`);
       
@@ -828,94 +798,74 @@ export class MortgageService {
       const originalTermMonths = variantA.comparison.loanTermMonths;
       console.log(`Oryginalny okres kredytowania: ${originalTermMonths} miesięcy`);
       
-      // NEW APPROACH: Simple linear search from the shortest term (12 months)
-      // to the original term to find the shortest term with payment <= maxAllowedInstallment
+      // NEW LOGIC: Find the shortest term where payment <= maxAllowedInstallment
+      // and payment is as close as possible to originalMonthlyInstallment
       
-      // Start with minimum term (12 months) and increase until we find a valid term
       const MIN_TERM_MONTHS = 12; // Minimum 1 year
-      let validTerm = originalTermMonths; // Default to original term if no shorter valid term is found
-      let validVariant = null;
+      let bestTerm = originalTermMonths; // Default to original term
+      let bestVariant = null;
+      let bestPaymentDifference = Number.MAX_VALUE; // Track closest payment to original
       
-      // First check: is the payment at original term - 1 already too high?
-      const testVariant = this.calculateCurrentLoanScenario(
-        newLoanAmount,
-        originalTermMonths - 1,
-        newInterestRate,
-        input.advanced.newInstallmentType,
-        startDate
-      );
+      console.log(`Szukam najkrótszego okresu z ratą nieprzekraczającą ${maxAllowedInstallment.toFixed(2)} zł...`);
       
-      const testInstallment = testVariant.comparison.monthlyInstallment;
-      console.log(`Test: payment at ${originalTermMonths - 1} months = ${testInstallment.toFixed(2)} zł (limit: ${maxAllowedInstallment.toFixed(2)} zł)`);
-      
-      if (testInstallment > maxAllowedInstallment) {
-        console.log(`Nawet przy skróceniu o 1 miesiąc rata (${testInstallment.toFixed(2)} zł) przekracza dozwoloną (${maxAllowedInstallment.toFixed(2)} zł)`);
-        console.log(`Używam oryginalnego okresu kredytowania: ${originalTermMonths} miesięcy`);
-        
-        // Use original term
-        validTerm = originalTermMonths;
-        validVariant = this.calculateCurrentLoanScenario(
+      // Search from shortest to longest term
+      for (let term = MIN_TERM_MONTHS; term <= originalTermMonths; term++) {
+        const currentVariant = this.calculateCurrentLoanScenario(
           newLoanAmount,
-          validTerm,
+          term,
           newInterestRate,
           input.advanced.newInstallmentType,
           startDate
         );
-      } else {
-        // Check each potential term from shortest to longest until we find a valid one
-        // Start from shortest possible (12 months) and work up
-        for (let term = MIN_TERM_MONTHS; term < originalTermMonths; term++) {
-          const currentVariant = this.calculateCurrentLoanScenario(
-            newLoanAmount,
-            term,
-            newInterestRate,
-            input.advanced.newInstallmentType,
-            startDate
-          );
-          
-          const currentInstallment = currentVariant.comparison.monthlyInstallment;
-          
-          // Log every 12 months to avoid excessive logging
-          if (term % 12 === 0 || term === MIN_TERM_MONTHS) {
-            console.log(`Sprawdzam okres ${term} miesięcy: rata = ${currentInstallment.toFixed(2)} zł (limit: ${maxAllowedInstallment.toFixed(2)} zł)`);
-          }
-          
-          // Check if this term gives a payment within our limit
-          if (currentInstallment <= maxAllowedInstallment) {
-            validTerm = term;
-            validVariant = currentVariant;
-            console.log(`Znaleziono najkrótszy okres: ${term} miesięcy, rata: ${currentInstallment.toFixed(2)} zł`);
-            break; // Exit the loop as soon as we find a valid term
-          }
+        
+        const currentInstallment = currentVariant.comparison.monthlyInstallment;
+        
+        // Log every 12 months to avoid excessive logging
+        if (term % 12 === 0 || term === MIN_TERM_MONTHS || term === originalTermMonths) {
+          console.log(`Sprawdzam okres ${term} miesięcy: rata = ${currentInstallment.toFixed(2)} zł (limit: ${maxAllowedInstallment.toFixed(2)} zł)`);
         }
         
-        // If no valid term was found, use original term
-        if (validVariant === null) {
-          console.log(`Nie znaleziono krótszego okresu z ratą nieprzekraczającą ${maxAllowedInstallment.toFixed(2)} zł`);
-          console.log(`Używam oryginalnego okresu kredytowania: ${originalTermMonths} miesięcy`);
+        // Check if this term gives a payment within our limit
+        if (currentInstallment <= maxAllowedInstallment) {
+          // This is the first (shortest) term that satisfies our constraint
+          bestTerm = term;
+          bestVariant = currentVariant;
+          bestPaymentDifference = Math.abs(currentInstallment - originalMonthlyInstallment);
           
-          validTerm = originalTermMonths;
-          validVariant = this.calculateCurrentLoanScenario(
-            newLoanAmount,
-            validTerm,
-            newInterestRate,
-            input.advanced.newInstallmentType,
-            startDate
-          );
+          console.log(`Znaleziono najkrótszy okres spełniający warunki: ${term} miesięcy, rata: ${currentInstallment.toFixed(2)} zł (różnica od oryginalnej: ${bestPaymentDifference.toFixed(2)} zł)`);
+          
+          // Since we're looking for the shortest valid term, break immediately
+          break;
         }
       }
       
+      // If no valid shorter term was found, use original term
+      if (bestVariant === null) {
+        console.log(`Nie znaleziono krótszego okresu z ratą nieprzekraczającą ${maxAllowedInstallment.toFixed(2)} zł`);
+        console.log(`Używam oryginalnego okresu kredytowania: ${originalTermMonths} miesięcy`);
+        
+        bestTerm = originalTermMonths;
+        bestVariant = this.calculateCurrentLoanScenario(
+          newLoanAmount,
+          bestTerm,
+          newInterestRate,
+          input.advanced.newInstallmentType,
+          startDate
+        );
+      }
+      
       // Final verification
-      const finalInstallment = validVariant.comparison.monthlyInstallment;
+      const finalInstallment = bestVariant.comparison.monthlyInstallment;
       const difference = finalInstallment - originalMonthlyInstallment;
       
       console.log(`-----------------------------------`);
       console.log(`PODSUMOWANIE:`);
       console.log(`  Oryginalny okres: ${originalTermMonths} miesięcy`);
-      console.log(`  Wybrany okres: ${validTerm} miesięcy (skrócenie o ${originalTermMonths - validTerm} miesięcy)`);
+      console.log(`  Wybrany okres: ${bestTerm} miesięcy (skrócenie o ${originalTermMonths - bestTerm} miesięcy)`);
       console.log(`  Oryginalna rata: ${originalMonthlyInstallment.toFixed(2)} zł`);
       console.log(`  Nowa rata: ${finalInstallment.toFixed(2)} zł`);
       console.log(`  Różnica rat: ${difference.toFixed(2)} zł (limit: ${PAYMENT_INCREASE_LIMIT} zł)`);
+      console.log(`  Rata mieści się w limicie: ${finalInstallment <= maxAllowedInstallment ? 'TAK' : 'NIE'}`);
       console.log(`-----------------------------------`);
       
       // Final safety check - if somehow we still exceed the limit, use original term
@@ -923,10 +873,10 @@ export class MortgageService {
         console.log(`BŁĄD KRYTYCZNY: Finalna rata ${finalInstallment.toFixed(2)} zł nadal przekracza limit ${maxAllowedInstallment.toFixed(2)} zł!`);
         console.log(`Wymuszam użycie oryginalnego okresu kredytowania: ${originalTermMonths} miesięcy`);
         
-        validTerm = originalTermMonths;
-        validVariant = this.calculateCurrentLoanScenario(
+        bestTerm = originalTermMonths;
+        bestVariant = this.calculateCurrentLoanScenario(
           newLoanAmount,
-          validTerm,
+          bestTerm,
           newInterestRate,
           input.advanced.newInstallmentType,
           startDate
@@ -935,7 +885,7 @@ export class MortgageService {
       
       // Calculate total benefit
       const originalTotalCost = variantA.comparison.totalAmount;
-      const newTotalCost = validVariant.comparison.totalAmount + refinancingCosts - commissionRefund;
+      const newTotalCost = bestVariant.comparison.totalAmount + refinancingCosts - commissionRefund;
       const totalBenefit = originalTotalCost - newTotalCost;
       
       // Calculate payback period
@@ -946,19 +896,19 @@ export class MortgageService {
         paybackPeriodMonths = 0;
       } else {
         // Simplified estimate based on term reduction
-        paybackPeriodMonths = Math.max(1, Math.floor(validTerm * 0.075));
+        paybackPeriodMonths = Math.max(1, Math.floor(bestTerm * 0.075));
       }
       
       // Return the result with adjusted values
       return {
         comparison: {
-          ...validVariant.comparison,
+          ...bestVariant.comparison,
           commissionRefund,
           refinancingCosts,
           totalBenefit,
           paybackPeriodMonths,
         },
-        schedule: validVariant.schedule,
+        schedule: bestVariant.schedule,
       };
     } catch (error) {
       console.error('Błąd w obliczaniu wariantu z krótszym okresem:', error.message);

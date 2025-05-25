@@ -12,7 +12,11 @@ import {
   useTheme,
   useMediaQuery,
   Divider,
-  Chip
+  Chip,
+  Switch,
+  FormControlLabel,
+  Alert,
+  Collapse
 } from '@mui/material';
 import { useCalculateMortgageMutation } from '../../store/api';
 import LoanBasicForm from './LoanBasicForm';
@@ -24,13 +28,15 @@ import { useNavigate } from 'react-router-dom';
 import PaymentsIcon from '@mui/icons-material/Payments';
 import ScheduleIcon from '@mui/icons-material/Schedule';
 import SavingsIcon from '@mui/icons-material/Savings';
+import CloudOffIcon from '@mui/icons-material/CloudOff';
+import CloudIcon from '@mui/icons-material/Cloud';
 import {
   CalculationParams,
   CyclicOverpayment,
-  InterestRateChange,
   MortgageInput,
   Overpayment,
 } from '../../interfaces/mortgage';
+import { calculateMortgageLocally } from '../../utils/mortgageCalculations';
 
 const Calculator: React.FC = () => {
   const [calculateMortgage, { isLoading }] = useCalculateMortgageMutation();
@@ -38,6 +44,8 @@ const Calculator: React.FC = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const [activeStep, setActiveStep] = useState(0);
+  const [useLocalCalculation, setUseLocalCalculation] = useState(false);
+  const [calculationError, setCalculationError] = useState<string | null>(null);
 
   // Default mortgage input values
   const [mortgageInput, setMortgageInput] = useState<MortgageInput>({
@@ -95,6 +103,8 @@ const Calculator: React.FC = () => {
   };
 
   const handleCalculate = async () => {
+    setCalculationError(null);
+    
     try {
       const params: CalculationParams = {
         mortgageInput,
@@ -106,15 +116,57 @@ const Calculator: React.FC = () => {
       console.log('Wysyłam żądanie obliczenia kredytu z parametrami:', JSON.stringify(params));
       console.log('Typ nadpłaty:', overpaymentEffect);
       console.log('Parametry cyklicznej nadpłaty:', cyclicOverpayment ? JSON.stringify(cyclicOverpayment) : 'BRAK');
+      console.log('Tryb obliczeń:', useLocalCalculation ? 'LOKALNY' : 'API');
 
-      const result = await calculateMortgage(params).unwrap();
-      
-      if (result.id) {
-        navigate(`/results/${result.id}`);
+      if (useLocalCalculation) {
+        // Użyj lokalnych obliczeń
+        console.log('Wykonuję lokalne obliczenia...');
+        const localResult = calculateMortgageLocally(params);
+        
+        // Stwórz obiekt zgodny z interfejsem MortgageCalculation
+        const mockCalculation = {
+          id: `local-${Date.now()}`,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          params,
+          result: localResult
+        };
+        
+        // Zapisz wynik w localStorage dla lokalnego dostępu
+        localStorage.setItem(`calculation-${mockCalculation.id}`, JSON.stringify(mockCalculation));
+        
+        console.log('Lokalne obliczenia zakończone, przekierowuję do wyników...');
+        navigate(`/results/${mockCalculation.id}`);
+      } else {
+        // Użyj API z fallback do lokalnych obliczeń
+        try {
+          const result = await calculateMortgage(params).unwrap();
+          
+          if (result.id) {
+            navigate(`/results/${result.id}`);
+          }
+        } catch (apiError) {
+          console.error('Błąd API, przełączam na lokalne obliczenia:', apiError);
+          setCalculationError('Serwer jest niedostępny. Przełączono na obliczenia lokalne.');
+          
+          // Fallback do lokalnych obliczeń
+          const localResult = calculateMortgageLocally(params);
+          
+          const mockCalculation = {
+            id: `local-fallback-${Date.now()}`,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+            params,
+            result: localResult
+          };
+          
+          localStorage.setItem(`calculation-${mockCalculation.id}`, JSON.stringify(mockCalculation));
+          navigate(`/results/${mockCalculation.id}`);
+        }
       }
     } catch (error) {
-      console.error('Failed to calculate mortgage:', error);
-      // You could add a snackbar or other notification here
+      console.error('Krytyczny błąd podczas obliczeń:', error);
+      setCalculationError('Wystąpił błąd podczas obliczeń. Spróbuj ponownie.');
     }
   };
 
@@ -258,6 +310,41 @@ const Calculator: React.FC = () => {
           </Box>
 
           <Divider sx={{ my: 3 }} />
+
+          {/* Opcje obliczeń */}
+          <Box sx={{ mb: 3 }}>
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={useLocalCalculation}
+                  onChange={(e) => setUseLocalCalculation(e.target.checked)}
+                  color="primary"
+                />
+              }
+              label={
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  {useLocalCalculation ? <CloudOffIcon /> : <CloudIcon />}
+                  <Typography variant="body2">
+                    {useLocalCalculation ? 'Obliczenia lokalne (offline)' : 'Obliczenia online (API)'}
+                  </Typography>
+                </Box>
+              }
+              sx={{ mb: 1 }}
+            />
+            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', ml: 4 }}>
+              {useLocalCalculation 
+                ? 'Obliczenia wykonywane w przeglądarce - szybsze, działają offline'
+                : 'Obliczenia wykonywane na serwerze - z automatycznym fallback do trybu lokalnego'
+              }
+            </Typography>
+          </Box>
+
+          {/* Alert z błędem */}
+          <Collapse in={!!calculationError}>
+            <Alert severity="warning" sx={{ mb: 2 }} onClose={() => setCalculationError(null)}>
+              {calculationError}
+            </Alert>
+          </Collapse>
 
           <Box 
             sx={{ 

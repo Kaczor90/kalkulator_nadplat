@@ -45,29 +45,13 @@ services:
       target: production
     environment:
       - NODE_ENV=production
-      - MONGODB_URI=mongodb://db:27017/mortgage-calculator
+      - MONGODB_URI=${MONGODB_URI}
       - MAX_PDF_SIZE=10485760 # 10MB in bytes
-    depends_on:
-      - db
     networks:
       - mortgage-calculator-network
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "wget", "-q", "--spider", "http://localhost:3010/api/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-
-  db:
-    container_name: mortgage-calculator-db
-    image: mongo:latest
-    volumes:
-      - mortgage-calculator-data:/data/db
-    networks:
-      - mortgage-calculator-network
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
       interval: 30s
       timeout: 10s
       retries: 3

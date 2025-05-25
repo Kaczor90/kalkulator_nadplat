@@ -10,7 +10,6 @@ import {
   Button,
   ButtonGroup
 } from '@mui/material';
-import CalculateIcon from '@mui/icons-material/Calculate';
 import PaymentsIcon from '@mui/icons-material/Payments';
 import CompareArrowsIcon from '@mui/icons-material/CompareArrows';
 import { Link, useLocation } from 'react-router-dom';
@@ -48,11 +47,15 @@ const Header: React.FC = () => {
               mr: isMobile ? 0 : 2
             }}
           >
-            <CalculateIcon 
+            <Box
+              component="img"
+              src="/logo192.png"
+              alt="Logo"
               sx={{ 
-                color: 'primary.main', 
-                mr: 1.5, 
-                fontSize: isMobile ? 24 : 28 
+                height: isMobile ? 64 : 80,
+                width: isMobile ? 64 : 80,
+                mr: 1.5,
+                objectFit: 'contain'
               }} 
             />
             <Typography 

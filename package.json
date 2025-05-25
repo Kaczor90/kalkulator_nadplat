@@ -11,10 +11,6 @@
     "start:backend": "cd backend && npm run start:prod",
     "dev": "npm-run-all --parallel start:frontend start:backend"
   },
-  "engines": {
-    "node": ">=16.0.0",
-    "npm": ">=8.0.0"
-  },
   "author": "",
   "license": "ISC",
   "devDependencies": {

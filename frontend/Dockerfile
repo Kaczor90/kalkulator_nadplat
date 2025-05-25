@@ -1,10 +1,10 @@
 # Build stage
-FROM --platform=linux/amd64 node:18-alpine AS build
+FROM --platform=linux/amd64 node:20-alpine AS build
 WORKDIR /app
 
 # Install dependencies with caching
 COPY package*.json ./
-RUN npm ci
+RUN npm ci --legacy-peer-deps
 
 # Copy source code
 COPY . .
@@ -16,7 +16,7 @@ ENV GENERATE_SOURCEMAP=false
 RUN npm run build
 
 # Development stage
-FROM --platform=linux/amd64 node:18-alpine AS development
+FROM --platform=linux/amd64 node:20-alpine AS development
 WORKDIR /app
 
 # Install dependencies

@@ -148,17 +148,16 @@ const ResultCharts: React.FC<Props> = ({ result }) => {
       borderRadius: 3,
       border: '1px solid rgba(0, 0, 0, 0.12)',
     }}>
-      <Typography 
-        variant="h5" 
-        gutterBottom 
-        align="center"
-        sx={{ 
-          fontWeight: 600, 
-          mb: 3
-        }}
-      >
-        Wykresy Porównawcze
-      </Typography>
+      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', mb: 3 }}>
+        <Typography 
+          variant="h5" 
+          sx={{ 
+            fontWeight: 600
+          }}
+        >
+          Wykresy Porównawcze
+        </Typography>
+      </Box>
 
       <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
         <Tabs 

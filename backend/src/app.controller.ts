@@ -1,8 +1,6 @@
-import { Controller, Get, Res, All } from '@nestjs/common';
+import { Controller, Get } from '@nestjs/common';
 import { AppService } from './app.service';
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
-import { Response } from 'express';
-import { join } from 'path';
 
 @ApiTags('Main')
 @Controller()
@@ -21,10 +19,5 @@ export class AppController {
       status: 'ok',
       timestamp: new Date().toISOString(),
     };
-  }
-  
-  @All('*')
-  catchAll(@Res() res: Response) {
-    return res.sendFile(join(process.cwd(), 'public/index.html'));
   }
 }

@@ -24,7 +24,7 @@ module.exports = {
       retryReads: true,
       maxPoolSize: 10, // Limit connection pool size for render.com
       minPoolSize: 1,
-      maxIdleTimeMS: 45000, // Close idle connections after 45 seconds,
+      maxIdleTimeMS: 45000, // Close idle connections after 45 seconds
       
       // ServerApi configuration from the provided example
       serverApi: {

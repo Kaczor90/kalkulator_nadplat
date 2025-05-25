@@ -1,65 +1,82 @@
-# MongoDB Setup Guide for Render.com
+# MongoDB Environment Setup Guide
 
-This document provides step-by-step instructions to set up MongoDB Atlas with your render.com deployment.
+This project is configured to work with two different MongoDB environments:
 
-## MongoDB Atlas Connection String
+1. **Development Environment** - Uses a local MongoDB instance running in Docker
+2. **Production Environment** - Uses a remote MongoDB Atlas instance
 
-We're using the following MongoDB Atlas connection string:
+## Development Environment Setup
 
-```
-mongodb+srv://radekdsa:<PASSWORD>@cluster0.h9egut1.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0
-```
+The development environment uses a local MongoDB instance that is automatically started as part of the Docker Compose setup.
 
-## Setup Steps
+### How to Start Development Environment
 
-### 1. Set up Environment Variables in Render.com
+Simply run the development script:
 
-1. Go to your service dashboard in render.com
-2. Navigate to the "Environment" tab
-3. Add the following environment variables:
-
-   | Key | Value |
-   | --- | --- |
-   | `MONGODB_URI` | `mongodb+srv://radekdsa:<MONGODB_PASSWORD>@cluster0.h9egut1.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0` |
-   | `MONGODB_PASSWORD` | `Kaczor1990!@#` |
-   | `DEBUG` | `true` |
-   | `MONGOOSE_DEBUG` | `true` |
-   | `TZ` | `UTC` |
-
-4. Click "Save Changes"
-5. Redeploy your application for these changes to take effect
-
-### 2. Test the MongoDB Connection
-
-You can test your MongoDB connection by navigating to the `/api/health` endpoint of your application. This will show the current connection status and details.
-
-If you're developing locally, you can also use the test script:
-
-```bash
-cd backend
-node src/scripts/test-mongodb-connection.js
+```powershell
+.\run-dev.ps1
 ```
 
-### 3. Troubleshooting Connection Issues
+This script will:
+- Create the necessary environment files if they don't exist
+- Set the MongoDB connection string to use the local Docker MongoDB instance
+- Start all services with docker-compose
 
-If you continue to experience connection issues:
+The connection string used is: `mongodb://db:27017/mortgage-calculator`
 
-1. **Check your password**: Ensure your MongoDB Atlas password is correct and doesn't contain special characters that might need URL encoding
-2. **Network Access**: Verify that your render.com IP addresses are whitelisted in MongoDB Atlas network access
-3. **MongoDB User**: Confirm that your MongoDB user has the appropriate permissions
-4. **Check Logs**: In render.com dashboard, check the logs for detailed error messages
-5. **Try with TLS disabled**: If you're experiencing TLS issues, you can modify `backend/src/config/render.config.js` to set `tls: false`
+## Production Environment Setup
 
-### 4. MongoDB Atlas Configuration
+The production environment is configured to connect to a MongoDB Atlas instance or any other remote MongoDB server.
 
-Make sure your MongoDB Atlas cluster has:
+### How to Start Production Environment
 
-1. Your render.com IP addresses whitelisted in Network Access
-2. A database user with appropriate privileges
-3. The correct database name ('mortgage-calculator' by default)
+Run the production script:
 
-## Additional Information
+```powershell
+.\run-prod.ps1
+```
 
-The application is configured to log detailed MongoDB connection information and errors to help diagnose issues.
+This script will:
+- Create the necessary environment files if they don't exist
+- Prompt you for a MongoDB Atlas connection string (or use the default if none provided)
+- If using the default, it will prompt for your MongoDB Atlas password
+- Configure the production environment to use the external MongoDB instance
+- Start all services with docker-compose using the production configuration
 
-You can find these logs in your render.com service logs under the "Logs" tab. 
+### MongoDB Atlas Setup
+
+If you don't already have a MongoDB Atlas account and cluster:
+
+1. Sign up for a free account at [MongoDB Atlas](https://www.mongodb.com/cloud/atlas)
+2. Create a new cluster
+3. Set up database access and create a user with appropriate permissions
+4. Get your connection string from the Atlas dashboard
+5. When running `run-prod.ps1`, enter this connection string when prompted
+
+## Troubleshooting
+
+### Unable to connect to the database
+
+If you see an error like:
+```
+mortgage-calculator-backend | [Nest] 1 - ERROR [MongooseModule] Unable to connect to the database. Retrying...
+```
+
+For development environment:
+- Make sure Docker is running properly
+- Check if the MongoDB container is running: `docker ps | grep mortgage-calculator-db`
+- Try restarting the services: `.\run-dev.ps1`
+
+For production environment:
+- Verify your MongoDB Atlas connection string is correct
+- Check that the IP address of your machine is whitelisted in MongoDB Atlas
+- Ensure your MongoDB Atlas user has the correct permissions
+- Try running with a different connection string
+
+## Environment Variables
+
+The following environment variables are used for MongoDB configuration:
+
+- `MONGODB_URI`: The MongoDB connection string
+- `MONGODB_PASSWORD`: The password for MongoDB Atlas (if using the default connection string)
+- `NODE_ENV`: Set to 'development' or 'production' to determine which configuration to use 
