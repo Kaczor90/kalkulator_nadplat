@@ -34,11 +34,6 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
-# Docker files (using native Render environments)
-Dockerfile
-**/Dockerfile
-docker-compose*.yml
-
 # Docker volumes
 volumes/
 

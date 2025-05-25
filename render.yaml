@@ -3,10 +3,8 @@ services:
   - type: web
     name: mortgage-calculator-frontend
     env: static
-    buildCommand: cd frontend && npm ci && npm run build
+    buildCommand: cd frontend && npm install && npm run build
     staticPublishPath: ./frontend/build
-    pullRequestPreviewsEnabled: false
-    dockerfilePath: null
     envVars:
       - key: REACT_APP_API_URL
         fromService:
@@ -24,10 +22,8 @@ services:
     name: mortgage-calculator-backend
     env: node
     plan: starter
-    buildCommand: cd backend && npm ci && npm run build
+    buildCommand: cd backend && npm install && npm run build
     startCommand: cd backend && npm run start:prod
-    pullRequestPreviewsEnabled: false
-    dockerfilePath: null
     envVars:
       - key: NODE_ENV
         value: production
@@ -36,7 +32,7 @@ services:
       - key: MAX_PDF_SIZE
         value: 10485760
       - key: MONGODB_URI
-        sync: false
+        value: "mongodb+srv://radekdsa:<MONGODB_PASSWORD>@cluster0.h9egut1.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
       # Add debug options for easier troubleshooting
       - key: DEBUG
         value: "true"
@@ -46,6 +42,9 @@ services:
       # Other MongoDB related configs
       - key: TZ
         value: "UTC"
+      - key: MONGODB_PASSWORD
+        value: "Kaczor1990!@#"
+        sync: false
 
 databases:
   - name: mortgage-calculator-db
