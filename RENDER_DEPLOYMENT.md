@@ -74,6 +74,14 @@ Po wdrożeniu aplikacja będzie dostępna pod adresami:
 
 ## Rozwiązywanie problemów
 
+### Problem z Dockerfile
+
+**Błąd**: `failed to read dockerfile: open Dockerfile: no such file or directory`
+
+**Rozwiązanie**: Ten błąd występuje, gdy Render wykrywa pliki Dockerfile w repozytorium i próbuje ich użyć zamiast konfiguracji z `render.yaml`. 
+
+✅ **Rozwiązano**: Pliki Dockerfile zostały usunięte z repozytorium, ponieważ używamy natywnych środowisk Node.js i static w Render.
+
 ### Problem z połączeniem do MongoDB
 
 1. Sprawdź logi backendu w panelu Render
