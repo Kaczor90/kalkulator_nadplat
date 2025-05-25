@@ -1,0 +1,17 @@
+# Ignore Docker files - using native Render environments
+Dockerfile*
+docker-compose*
+.dockerignore
+
+# Ignore development files
+.env*
+*.log
+node_modules/
+
+# Ignore local database
+db/data/
+
+# Ignore IDE files
+.vscode/
+.idea/
+*.code-workspace 
