@@ -6,6 +6,7 @@ services:
     buildCommand: cd frontend && npm ci && npm run build
     staticPublishPath: ./frontend/build
     pullRequestPreviewsEnabled: false
+    dockerfilePath: null
     envVars:
       - key: REACT_APP_API_URL
         fromService:
@@ -26,6 +27,7 @@ services:
     buildCommand: cd backend && npm ci && npm run build
     startCommand: cd backend && npm run start:prod
     pullRequestPreviewsEnabled: false
+    dockerfilePath: null
     envVars:
       - key: NODE_ENV
         value: production
