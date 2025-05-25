@@ -3,8 +3,9 @@ services:
   - type: web
     name: mortgage-calculator-frontend
     env: static
-    buildCommand: cd frontend && npm install && npm run build
+    buildCommand: cd frontend && npm ci && npm run build
     staticPublishPath: ./frontend/build
+    pullRequestPreviewsEnabled: false
     envVars:
       - key: REACT_APP_API_URL
         fromService:
@@ -22,8 +23,9 @@ services:
     name: mortgage-calculator-backend
     env: node
     plan: starter
-    buildCommand: cd backend && npm install && npm run build
+    buildCommand: cd backend && npm ci && npm run build
     startCommand: cd backend && npm run start:prod
+    pullRequestPreviewsEnabled: false
     envVars:
       - key: NODE_ENV
         value: production
