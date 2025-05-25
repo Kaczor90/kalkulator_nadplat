@@ -42,9 +42,7 @@ services:
       # Other MongoDB related configs
       - key: TZ
         value: "UTC"
-      - key: MONGODB_PASSWORD
-        value: "Kaczor1990!@#"
-        sync: false
+      # MONGODB_PASSWORD will be set manually in Render.com dashboard for security
 
 databases:
   - name: mortgage-calculator-db
