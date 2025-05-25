@@ -1,8 +1,14 @@
 # Przewodnik wdrożenia na Render.com
 
-## Przygotowanie do wdrożenia
+## ⚠️ WAŻNE: Jeśli masz problemy z Blueprint
 
-### 1. Wypchnięcie kodu do GitHub
+Jeśli nadal otrzymujesz błąd `failed to read dockerfile`, użyj **METODY 2** (ręczne tworzenie usług) zamiast Blueprint.
+
+## METODA 1: Blueprint (preferowana)
+
+### Przygotowanie do wdrożenia
+
+#### 1. Wypchnięcie kodu do GitHub
 
 ```bash
 # Dodaj wszystkie zmiany
@@ -15,11 +21,11 @@ git commit -m "feat: przygotowanie do wdrożenia produkcyjnego na Render.com"
 git push origin master
 ```
 
-### 2. Konfiguracja zmiennych środowiskowych w Render
+#### 2. Konfiguracja zmiennych środowiskowych w Render
 
 Po utworzeniu usług w Render, musisz skonfigurować następujące zmienne środowiskowe:
 
-#### Backend Service (mortgage-calculator-backend)
+##### Backend Service (mortgage-calculator-backend)
 
 W panelu Render, przejdź do ustawień backendu i dodaj zmienną:
 
@@ -27,21 +33,59 @@ W panelu Render, przejdź do ustawień backendu i dodaj zmienną:
   
   ⚠️ **Ważne**: Zastąp `TWOJE_HASŁO` rzeczywistym hasłem do MongoDB Atlas.
 
-## Kroki wdrożenia
+### Kroki wdrożenia Blueprint
 
-### 1. Połącz GitHub z Render
+#### 1. Połącz GitHub z Render
 
 1. Zaloguj się do [render.com](https://render.com)
 2. Kliknij "New" → "Blueprint"
 3. Połącz swoje konto GitHub
 4. Wybierz repozytorium `kalkulator_nadplat`
 
-### 2. Wdrożenie Blueprint
+#### 2. Wdrożenie Blueprint
 
 1. Render wykryje plik `render.yaml`
 2. Przejrzyj konfigurację usług
 3. Kliknij "Apply Blueprint"
 4. Poczekaj na zakończenie wdrożenia
+
+## METODA 2: Ręczne tworzenie usług (jeśli Blueprint nie działa)
+
+### Frontend - Static Site
+
+1. W panelu Render kliknij **"New"** → **"Static Site"**
+2. Połącz repozytorium GitHub: `kalkulator_nadplat`
+3. Konfiguracja:
+   - **Name**: `mortgage-calculator-frontend`
+   - **Build Command**: `cd frontend && npm ci && npm run build`
+   - **Publish Directory**: `frontend/build`
+4. Environment Variables:
+   - `REACT_APP_API_URL`: `https://mortgage-calculator-backend.onrender.com`
+   - `REACT_APP_THEME_PRIMARY_COLOR`: `#2563EB`
+   - `REACT_APP_THEME_SECONDARY_COLOR`: `#10B981`
+
+### Backend - Web Service
+
+1. W panelu Render kliknij **"New"** → **"Web Service"**
+2. Połącz repozytorium GitHub: `kalkulator_nadplat`
+3. Konfiguracja:
+   - **Name**: `mortgage-calculator-backend`
+   - **Environment**: `Node`
+   - **Build Command**: `cd backend && npm ci && npm run build`
+   - **Start Command**: `cd backend && npm run start:prod`
+4. Environment Variables:
+   - `NODE_ENV`: `production`
+   - `PORT`: `10000`
+   - `MAX_PDF_SIZE`: `10485760`
+   - `MONGODB_URI`: `mongodb+srv://radekdsa:TWOJE_HASŁO@cluster0.h9egut1.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`
+   - `DEBUG`: `true`
+   - `MONGOOSE_DEBUG`: `true`
+   - `TZ`: `UTC`
+
+⚠️ **Ważne**: W ustawieniach każdej usługi upewnij się, że:
+- **Auto-Deploy**: ON
+- **Docker**: OFF (nie używaj Docker)
+- **Environment**: Node (backend) / Static (frontend)
 
 ### 3. Konfiguracja zmiennych środowiskowych
 
@@ -74,13 +118,22 @@ Po wdrożeniu aplikacja będzie dostępna pod adresami:
 
 ## Rozwiązywanie problemów
 
-### Problem z Dockerfile
+### Problem z Dockerfile (nadal występuje)
 
 **Błąd**: `failed to read dockerfile: open Dockerfile: no such file or directory`
 
-**Rozwiązanie**: Ten błąd występuje, gdy Render wykrywa pliki Dockerfile w repozytorium i próbuje ich użyć zamiast konfiguracji z `render.yaml`. 
+**Rozwiązania**:
 
-✅ **Rozwiązano**: Pliki Dockerfile zostały usunięte z repozytorium, ponieważ używamy natywnych środowisk Node.js i static w Render.
+1. **Usuń cache Render**:
+   - Usuń wszystkie istniejące usługi w Render
+   - Odłącz i ponownie połącz repozytorium GitHub
+   - Spróbuj ponownie
+
+2. **Użyj METODY 2** (ręczne tworzenie usług) zamiast Blueprint
+
+3. **Sprawdź ustawienia repozytorium**:
+   - Upewnij się, że nie ma plików Dockerfile w głównym katalogu
+   - Sprawdź czy `.renderignore` jest w repozytorium
 
 ### Problem z połączeniem do MongoDB
 
@@ -92,7 +145,7 @@ Po wdrożeniu aplikacja będzie dostępna pod adresami:
 
 1. Sprawdź logi buildu w zakładce "Events"
 2. Upewnij się, że wszystkie zależności są w `package.json`
-3. Sprawdź czy ścieżki w `render.yaml` są poprawne
+3. Sprawdź czy ścieżki w komendach build są poprawne
 
 ## Aktualizacja aplikacji
 
